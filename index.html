@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="名刺帳">
+  <meta name="theme-color" content="#faf8f5">
+  <title>名刺帳</title>
+  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&family=Noto+Sans+JP:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: #faf8f5; font-family: 'Noto Sans JP', sans-serif; }
+    ::-webkit-scrollbar { display: none; }
+    * { -webkit-tap-highlight-color: transparent; }
+    #app { max-width: 430px; margin: 0 auto; height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; background: #faf8f5; }
+    .screen { display: none; flex-direction: column; height: 100%; }
+    .screen.active { display: flex; }
+
+    /* 共通 */
+    .header { padding: 56px 18px 12px; background: #fff; border-bottom: 1px solid #f0ede8; flex-shrink: 0; }
+    .header-row { display: flex; align-items: center; margin-bottom: 12px; }
+    .back-btn { background: none; border: none; cursor: pointer; color: #b5956a; font-size: 14px; display: flex; align-items: center; gap: 4px; font-family: inherit; }
+    .title { font-family: 'Noto Serif JP', serif; font-size: 22px; font-weight: 700; color: #1a1208; flex: 1; }
+    .btn { border: none; border-radius: 10px; cursor: pointer; font-family: inherit; font-weight: 600; }
+    .btn-primary { background: #2a2018; color: #fff; }
+    .btn-gold { background: #b5956a; color: #fff; }
+    .btn-ghost { background: none; border: 1px solid #ddd7ce; color: #6b5e4e; }
+    .btn-danger { background: none; border: 1px solid #f0c0b0; color: #c0634a; }
+    .scroll { flex: 1; overflow-y: auto; }
+    input, textarea { font-family: inherit; outline: none; }
+
+    /* APIキー画面 */
+    #screen-apikey { align-items: center; justify-content: center; padding: 32px 24px; }
+    #screen-apikey .icon { font-size: 48px; margin-bottom: 20px; }
+    #screen-apikey h2 { font-family: 'Noto Serif JP', serif; font-size: 20px; font-weight: 700; color: #1a1208; margin-bottom: 8px; text-align: center; }
+    #screen-apikey p { font-size: 13px; color: #8a7f72; margin-bottom: 24px; text-align: center; line-height: 1.8; }
+    #apikey-input { width: 100%; max-width: 340px; padding: 12px 16px; border-radius: 12px; border: 1px solid #e0dbd2; font-size: 14px; background: #fff; color: #2a2018; margin-bottom: 16px; }
+    #apikey-save { width: 100%; max-width: 340px; padding: 14px; font-size: 15px; border-radius: 12px; font-family: 'Noto Serif JP', serif; }
+    #apikey-note { margin-top: 16px; font-size: 12px; color: #b0a89c; text-align: center; }
+
+    /* 一覧画面 */
+    #search-box { position: relative; }
+    #search-box svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); opacity: 0.4; }
+    #search-input { width: 100%; padding: 10px 14px 10px 36px; border-radius: 12px; border: 1px solid #e8e2d8; font-size: 14px; background: #faf8f5; color: #2a2018; }
+    .card-item { display: flex; align-items: center; gap: 14px; padding: 14px 18px; cursor: pointer; border-bottom: 1px solid #f0ede8; background: #fff; transition: background 0.12s; }
+    .card-item:active { background: #faf8f5; }
+    .avatar { border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-family: 'Noto Serif JP', serif; font-weight: 700; color: #fff; }
+    .card-name { font-weight: 700; font-size: 15px; color: #1a1208; font-family: 'Noto Serif JP', serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-sub { font-size: 12px; color: #8a7f72; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .empty { padding: 60px 20px; text-align: center; color: #b0a89c; }
+    .empty .ei { font-size: 40px; margin-bottom: 12px; }
+    .list-footer { padding: 12px 18px 32px; background: #fff; border-top: 1px solid #f0ede8; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+    #card-count { font-size: 12px; color: #b0a89c; }
+    #add-btn { padding: 12px 24px; font-size: 14px; border-radius: 30px; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 16px rgba(42,32,24,0.25); font-family: 'Noto Serif JP', serif; }
+    #apikey-change { background: none; border: none; cursor: pointer; font-size: 12px; color: #b0a89c; font-family: inherit; }
+
+    /* 詳細画面 */
+    #detail-body { padding: 24px 20px; }
+    .detail-top { display: flex; flex-direction: column; align-items: center; margin-bottom: 28px; }
+    .detail-name { font-family: 'Noto Serif JP', serif; font-size: 22px; font-weight: 700; color: #1a1208; margin-top: 12px; }
+    .detail-title { font-size: 13px; color: #8a7f72; margin-top: 4px; }
+    .detail-company { font-size: 14px; color: #6b5e4e; margin-top: 2px; font-weight: 600; }
+    .detail-dept { font-size: 13px; color: #8a7f72; }
+    .info-box { background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 8px rgba(0,0,0,0.05); margin-bottom: 16px; }
+    .info-row { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid #f0ede8; }
+    .info-row:last-child { border-bottom: none; }
+    .info-icon { font-size: 18px; width: 24px; text-align: center; opacity: 0.5; }
+    .info-label { font-size: 11px; color: #aaa; margin-bottom: 1px; }
+    .info-value { font-size: 14px; color: #2a2018; }
+    .memo-box { background: #fff8ee; border-radius: 14px; padding: 16px 18px; margin-bottom: 16px; border: 1px solid #f0e8d0; }
+    .memo-label { font-size: 11px; color: #b5956a; margin-bottom: 6px; font-weight: 600; }
+    .memo-text { font-size: 14px; color: #4a3c2c; line-height: 1.7; white-space: pre-wrap; }
+    .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag { background: #f0ede8; border-radius: 20px; padding: 4px 12px; font-size: 12px; color: #6b5e4e; }
+
+    /* 編集画面 */
+    #edit-body { padding: 20px 18px; }
+    .field-label { font-size: 11px; color: #b5956a; font-weight: 600; display: block; margin-bottom: 4px; }
+    .field-input { width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid #e0dbd2; font-size: 14px; background: #fff; color: #2a2018; margin-bottom: 14px; }
+    .field-textarea { width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid #e0dbd2; font-size: 14px; background: #fff; color: #2a2018; resize: vertical; margin-bottom: 14px; }
+    .tag-row { display: flex; gap: 8px; margin-bottom: 8px; }
+    .tag-input { flex: 1; padding: 8px 12px; border-radius: 8px; border: 1px solid #e0dbd2; font-size: 13px; }
+    .tag-add-btn { background: #e8e2d8; border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; cursor: pointer; color: #6b5e4e; font-family: inherit; }
+    .tag-item { background: #f0ede8; border-radius: 20px; padding: 4px 10px; font-size: 12px; color: #6b5e4e; display: flex; align-items: center; gap: 4px; }
+    .tag-remove { background: none; border: none; cursor: pointer; padding: 0; font-size: 16px; color: #aaa; line-height: 1; }
+
+    /* スキャン画面 */
+    #scan-body { padding: 20px 18px; }
+    .scan-empty { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 40px 20px; }
+    .scan-icon { width: 80px; height: 80px; border-radius: 50%; background: #f0ede8; display: flex; align-items: center; justify-content: center; font-size: 36px; }
+    .scan-hint { font-size: 15px; color: #6b5e4e; text-align: center; }
+    #scan-file { display: none; }
+    #preview-img { width: 100%; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+    .scan-btns { display: flex; gap: 10px; margin-bottom: 20px; }
+    #retake-btn { flex: 1; padding: 12px; font-size: 14px; background: #e8e2d8; border: none; border-radius: 10px; cursor: pointer; color: #6b5e4e; font-family: inherit; }
+    #analyze-btn { flex: 2; padding: 12px; font-size: 14px; border-radius: 10px; color: #fff; font-weight: 700; font-family: inherit; }
+    .error-box { color: #c05040; font-size: 13px; text-align: center; margin-bottom: 16px; padding: 10px; background: #fff0ee; border-radius: 8px; }
+    .result-title { font-family: 'Noto Serif JP', serif; font-size: 14px; font-weight: 700; color: #b5956a; margin-bottom: 12px; }
+    #save-btn { width: 100%; padding: 14px; font-size: 15px; border-radius: 12px; margin-top: 8px; font-family: 'Noto Serif JP', serif; }
+    .card-img { width: 100%; max-width: 340px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- APIキー画面 -->
+  <div id="screen-apikey" class="screen">
+    <div class="icon">🔑</div>
+    <h2>APIキーを設定</h2>
+    <p>AI読み取り機能にはAnthropicの<br>APIキーが必要です。<br><span style="font-size:12px;color:#b0a89c">キーはこのデバイスに保存されます。</span></p>
+    <input id="apikey-input" type="password" placeholder="sk-ant-...">
+    <button id="apikey-save" class="btn btn-primary">設定して始める</button>
+    <p id="apikey-note">APIキーは console.anthropic.com で取得できます</p>
+  </div>
+
+  <!-- 一覧画面 -->
+  <div id="screen-list" class="screen">
+    <div class="header">
+      <div class="header-row">
+        <div class="title">名刺帳</div>
+        <button id="apikey-change" style="background:none;border:none;cursor:pointer;font-size:20px;opacity:0.5">⚙</button>
+      </div>
+      <div id="search-box">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="#6b5e4e" stroke-width="1.5"/><path d="M10.5 10.5l3 3" stroke="#6b5e4e" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <input id="search-input" type="search" placeholder="名前・会社で検索...">
+      </div>
+    </div>
+    <div class="scroll" id="card-list"></div>
+    <div class="list-footer">
+      <span id="card-count" style="font-size:12px;color:#b0a89c">0枚</span>
+      <button id="add-btn" class="btn btn-primary"><span style="font-size:18px">+</span> 名刺を追加</button>
+    </div>
+  </div>
+
+  <!-- 詳細画面 -->
+  <div id="screen-detail" class="screen">
+    <div class="header">
+      <div class="header-row">
+        <button class="back-btn" id="detail-back">
+          <svg width="8" height="14" viewBox="0 0 8 14" fill="none"><path d="M7 1L1 7l6 6" stroke="#b5956a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          戻る
+        </button>
+        <span style="flex:1"></span>
+        <button class="btn btn-ghost" id="edit-btn" style="padding:5px 14px;font-size:13px;margin-right:8px">編集</button>
+        <button class="btn btn-danger" id="delete-btn" style="padding:5px 14px;font-size:13px">削除</button>
+      </div>
+    </div>
+    <div class="scroll" id="detail-body"></div>
+  </div>
+
+
+  <!-- 設定画面 -->
+  <div id="screen-settings" class="screen">
+    <div class="header">
+      <div class="header-row">
+        <button class="back-btn" id="settings-back">
+          <svg width="8" height="14" viewBox="0 0 8 14" fill="none"><path d="M7 1L1 7l6 6" stroke="#b5956a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          戻る
+        </button>
+        <span style="flex:1;text-align:center;font-family:'Noto Serif JP',serif;font-weight:700;color:#1a1208">設定</span>
+        <span style="width:60px"></span>
+      </div>
+    </div>
+    <div class="scroll" style="padding:20px 18px">
+
+      <!-- APIキー -->
+      <div style="background:#fff;border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 1px 8px rgba(0,0,0,0.05)">
+        <div style="font-size:13px;font-weight:700;color:#b5956a;margin-bottom:10px">🔑 APIキー</div>
+        <input id="settings-apikey" type="password" placeholder="sk-ant-..."
+          style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid #e0dbd2;font-size:14px;background:#faf8f5;color:#2a2018;outline:none;margin-bottom:12px;font-family:inherit">
+        <button id="settings-apikey-save" class="btn btn-primary" style="width:100%;padding:11px;font-size:14px;border-radius:10px">保存</button>
+      </div>
+
+      <!-- エクスポート -->
+      <div style="background:#fff;border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 1px 8px rgba(0,0,0,0.05)">
+        <div style="font-size:13px;font-weight:700;color:#b5956a;margin-bottom:6px">📤 エクスポート</div>
+        <div style="font-size:12px;color:#8a7f72;margin-bottom:12px;line-height:1.6">名刺データを全件JSONファイルで書き出します。<br>画像データも含まれます。</div>
+        <button id="export-btn" class="btn btn-ghost" style="width:100%;padding:11px;font-size:14px;border-radius:10px">JSONファイルを書き出す</button>
+      </div>
+
+      <!-- インポート -->
+      <div style="background:#fff;border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 1px 8px rgba(0,0,0,0.05)">
+        <div style="font-size:13px;font-weight:700;color:#b5956a;margin-bottom:6px">📥 インポート</div>
+        <div style="font-size:12px;color:#8a7f72;margin-bottom:12px;line-height:1.6">エクスポートしたJSONファイルを読み込みます。<br>既存データと<b>重複しない</b>ものだけ追加されます。</div>
+        <input id="import-file" type="file" accept=".json" style="display:none">
+        <button id="import-btn" class="btn btn-ghost" style="width:100%;padding:11px;font-size:14px;border-radius:10px">JSONファイルを読み込む</button>
+        <div id="import-result" style="margin-top:10px;font-size:13px;text-align:center;min-height:20px"></div>
+      </div>
+
+      <!-- データ件数 -->
+      <div style="text-align:center;font-size:12px;color:#b0a89c;margin-top:8px" id="settings-count"></div>
+    </div>
+  </div>
+
+  <!-- 編集画面 -->
+  <div id="screen-edit" class="screen">
+    <div class="header">
+      <div class="header-row">
+        <button class="back-btn" id="edit-cancel" style="color:#8a7f72">キャンセル</button>
+        <span style="flex:1;text-align:center;font-family:'Noto Serif JP',serif;font-weight:700;color:#1a1208">名刺を編集</span>
+        <button class="btn btn-gold" id="edit-save" style="padding:6px 18px;font-size:13px">保存</button>
+      </div>
+    </div>
+    <div class="scroll" id="edit-body"></div>
+  </div>
+
+  <!-- スキャン画面 -->
+  <div id="screen-scan" class="screen">
+    <div class="header">
+      <div class="header-row">
+        <button class="back-btn" id="scan-cancel">
+          <svg width="8" height="14" viewBox="0 0 8 14" fill="none"><path d="M7 1L1 7l6 6" stroke="#b5956a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          キャンセル
+        </button>
+        <span style="flex:1;text-align:center;font-family:'Noto Serif JP',serif;font-weight:700;color:#1a1208">名刺を読み取る</span>
+        <span style="width:70px"></span>
+      </div>
+    </div>
+    <div class="scroll" id="scan-body"></div>
+  </div>
+
+</div>
+
+<script>
+
+// ── 画像圧縮 ──────────────────────────────────────────────────
+// maxLongSide: 長辺の上限（縦向き・横向き問わず文字が潰れないように長辺基準で判定）
+function compressImage(dataUrl, maxLongSide, quality) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const longSide = Math.max(img.width, img.height);
+      const scale = Math.min(1, maxLongSide / longSide);
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => resolve(null); // デコード不可（HEIC等）
+    img.src = dataUrl;
+  });
+}
+
+// ── State ─────────────────────────────────────────────────────
+let cards = JSON.parse(localStorage.getItem('meishi_cards') || '[]');
+let apiKey = localStorage.getItem('meishi_apikey') || '';
+let currentCard = null;
+let scanBase64 = null;
+let scanMimeType = 'image/jpeg';
+let editTags = [];
+
+function saveCards() { localStorage.setItem('meishi_cards', JSON.stringify(cards)); }
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+// HTML/属性値エスケープ（" < > & を含むデータで表示・フォームが壊れるのを防ぐ）
+function esc(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// ── Screen ────────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+}
+
+// ── Avatar ────────────────────────────────────────────────────
+function avatarHtml(name, size) {
+  const initials = name ? name.slice(0, 2) : '?';
+  const hue = name ? (name.charCodeAt(0) * 37 + (name.charCodeAt(1) || 0) * 19) % 360 : 200;
+  return `<div class="avatar" style="width:${size}px;height:${size}px;background:hsl(${hue},55%,62%);font-size:${size*0.38}px">${esc(initials)}</div>`;
+}
+
+// ── 一覧 ──────────────────────────────────────────────────────
+function renderList(query) {
+  const q = (query || '').toLowerCase();
+  const filtered = cards.filter(c =>
+    !q || (c.name||'').toLowerCase().includes(q) || (c.company||'').toLowerCase().includes(q)
+  ).sort((a,b) => (a.name||'').localeCompare(b.name||'', 'ja'));
+
+  const el = document.getElementById('card-list');
+  document.getElementById('card-count').textContent = cards.length + '枚';
+
+  if (filtered.length === 0) {
+    el.innerHTML = `<div class="empty"><div class="ei">🪪</div><div style="font-size:15px;font-family:'Noto Serif JP',serif">${q ? '該当する名刺がありません' : '名刺がまだありません'}</div>${!q ? '<div style="font-size:13px;margin-top:8px">右下のボタンから追加しましょう</div>' : ''}</div>`;
+    return;
+  }
+  el.innerHTML = filtered.map(c => `
+    <div class="card-item" data-id="${c.id}">
+      ${c.image ? `<img src="${c.image}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0">` : avatarHtml(c.name, 40)}
+      <div style="flex:1;min-width:0">
+        <div class="card-name">${esc(c.name) || '（名前なし）'}</div>
+        <div class="card-sub">${esc([c.company, c.title].filter(Boolean).join(' · ')) || '　'}</div>
+      </div>
+      <svg width="7" height="12" viewBox="0 0 7 12" fill="none"><path d="M1 1l5 5-5 5" stroke="#c9c0b4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+  `).join('');
+
+  el.querySelectorAll('.card-item').forEach(item => {
+    item.addEventListener('click', () => {
+      currentCard = cards.find(c => c.id === item.dataset.id);
+      renderDetail();
+      showScreen('detail');
+    });
+  });
+}
+
+// ── 詳細 ──────────────────────────────────────────────────────
+function renderDetail() {
+  const c = currentCard;
+  const infoRows = [
+    { icon: '✉', key: 'email', label: 'メール' },
+    { icon: '☎', key: 'phone', label: '電話' },
+    { icon: '📱', key: 'mobile', label: '携帯' },
+    { icon: '📠', key: 'fax', label: 'FAX' },
+    { icon: '🌐', key: 'website', label: 'ホームページ' },
+    { icon: '⌂', key: 'address', label: '住所' },
+  ].filter(f => c[f.key]);
+
+  document.getElementById('detail-body').innerHTML = `
+    <div class="detail-top">
+      ${c.image ? `<img src="${c.image}" class="card-img">` : avatarHtml(c.name, 72)}
+      <div class="detail-name">${esc(c.name) || '（名前なし）'}</div>
+      ${c.title ? `<div class="detail-title">${esc(c.title)}</div>` : ''}
+      ${c.company ? `<div class="detail-company">${esc(c.company)}</div>` : ''}
+      ${c.department ? `<div class="detail-dept">${esc(c.department)}</div>` : ''}
+    </div>
+    ${infoRows.length ? `<div class="info-box">${infoRows.map(f => `
+      <div class="info-row">
+        <span class="info-icon">${f.icon}</span>
+        <div><div class="info-label">${f.label}</div><div class="info-value">${esc(c[f.key])}</div></div>
+      </div>`).join('')}</div>` : ''}
+    ${c.memo ? `<div class="memo-box"><div class="memo-label">メモ</div><div class="memo-text">${esc(c.memo)}</div></div>` : ''}
+    ${c.tags?.length ? `<div class="tags">${c.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>` : ''}
+  `;
+}
+
+// ── 編集 ──────────────────────────────────────────────────────
+const FIELDS = [
+  { key:'name', label:'氏名', placeholder:'山田 太郎' },
+  { key:'company', label:'会社名', placeholder:'株式会社〇〇' },
+  { key:'department', label:'部署', placeholder:'営業部' },
+  { key:'title', label:'役職', placeholder:'部長' },
+  { key:'email', label:'メール', placeholder:'taro@example.com' },
+  { key:'phone', label:'電話', placeholder:'03-0000-0000' },
+  { key:'mobile', label:'携帯', placeholder:'090-0000-0000' },
+  { key:'fax', label:'FAX', placeholder:'03-0000-0001' },
+  { key:'website', label:'ホームページ', placeholder:'https://example.com' },
+  { key:'address', label:'住所', placeholder:'東京都...' },
+];
+
+function renderEdit(card) {
+  editTags = [...(card.tags || [])];
+  document.getElementById('edit-body').innerHTML = `
+    ${FIELDS.map(f => `
+      <label class="field-label">${f.label}</label>
+      <input class="field-input" data-key="${f.key}" value="${esc(card[f.key])}" placeholder="${f.placeholder}">
+    `).join('')}
+    <label class="field-label">メモ</label>
+    <textarea class="field-textarea" id="edit-memo" rows="4">${esc(card.memo)}</textarea>
+    <label class="field-label">タグ</label>
+    <div class="tag-row">
+      <input class="tag-input" id="tag-input" placeholder="タグを追加...">
+      <button class="tag-add-btn" id="tag-add-btn">追加</button>
+    </div>
+    <div class="tags" id="edit-tags"></div>
+  `;
+  renderEditTags();
+  document.getElementById('tag-add-btn').addEventListener('click', addTag);
+  document.getElementById('tag-input').addEventListener('keydown', e => { if(e.key==='Enter') addTag(); });
+}
+
+function renderEditTags() {
+  document.getElementById('edit-tags').innerHTML = editTags.map(t =>
+    `<span class="tag-item">${esc(t)}<button class="tag-remove" data-tag="${esc(t)}">×</button></span>`
+  ).join('');
+  document.querySelectorAll('.tag-remove').forEach(btn => {
+    btn.addEventListener('click', () => { editTags = editTags.filter(t => t !== btn.dataset.tag); renderEditTags(); });
+  });
+}
+
+function addTag() {
+  const input = document.getElementById('tag-input');
+  const t = input.value.trim();
+  if (t && !editTags.includes(t)) { editTags.push(t); renderEditTags(); }
+  input.value = '';
+}
+
+function getEditForm() {
+  const form = {};
+  document.querySelectorAll('#edit-body .field-input[data-key]').forEach(el => { form[el.dataset.key] = el.value; });
+  form.memo = document.getElementById('edit-memo').value;
+  form.tags = editTags;
+  return form;
+}
+
+// ── スキャン ──────────────────────────────────────────────────
+function renderScanEmpty() {
+  document.getElementById('scan-body').innerHTML = `
+    <input id="scan-file" type="file" accept="image/*">
+    <div class="scan-empty">
+      <div class="scan-icon">📷</div>
+      <div class="scan-hint">名刺を撮影または画像を選択してください</div>
+      <button class="btn btn-gold" id="shoot-btn" style="padding:14px 32px;font-size:16px;border-radius:12px;font-family:'Noto Serif JP',serif">📷 撮影・選択</button>
+    </div>
+  `;
+  document.getElementById('shoot-btn').addEventListener('click', () => document.getElementById('scan-file').click());
+  document.getElementById('scan-file').addEventListener('change', e => handleFile(e.target.files[0]));
+}
+
+function handleFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async e => {
+    // AI読み取り用に圧縮（画像はlocalStorageに保存しない）
+    // 長辺1568px・quality0.9で、細かい文字（住所・FAX番号など）が潰れにくいようにする
+    const compressed = await compressImage(e.target.result, 1568, 0.9);
+    if (!compressed) {
+      alert('画像を読み込めませんでした。\nHEIC形式などブラウザが表示できない画像の可能性があります。JPEGまたはPNGでお試しください。');
+      return;
+    }
+    scanBase64 = compressed.split(',')[1];
+    scanMimeType = 'image/jpeg';
+    renderScanPreview(false, null, null);
+  };
+  reader.readAsDataURL(file);
+}
+
+function renderScanPreview(loading, error, result, lowConf) {
+  lowConf = lowConf || [];
+  document.getElementById('scan-body').innerHTML = `
+    <input id="scan-file" type="file" accept="image/*" style="display:none">
+    ${scanBase64 ? `<img id="preview-img" src="data:image/jpeg;base64,${scanBase64}" alt="名刺プレビュー"><div style="text-align:center;font-size:12px;color:#8a7f72;margin:-8px 0 12px">容量節約のため画像自体は保存されません</div>` : ""}
+    <div class="scan-btns">
+      <button id="retake-btn">撮り直す</button>
+      <button id="analyze-btn" style="background:${loading ? '#d4c4a8' : '#b5956a'}">${loading ? '⏳ 読み取り中...' : '✨ AI読み取り'}</button>
+    </div>
+    ${error ? `<div class="error-box">${esc(error)}</div>` : ''}
+    ${result ? `
+      <div class="result-title">読み取り結果を確認・編集</div>
+      ${lowConf.length ? `<div style="font-size:12px;color:#b5956a;background:#fff8ee;border:1px solid #f0e8d0;border-radius:8px;padding:8px 12px;margin-bottom:12px">⚠️ 黄色い項目はAIの読み取りに自信が持てなかった箇所です。念のためご確認ください。</div>` : ''}
+      ${FIELDS.map(f => `
+        <label class="field-label">${f.label}${lowConf.includes(f.key) ? ' ⚠️要確認' : ''}</label>
+        <input class="field-input scan-result-field" data-key="${f.key}" value="${esc(result[f.key])}" placeholder="${f.placeholder}" style="${lowConf.includes(f.key) ? 'background:#fff8ee;border-color:#e0c896' : ''}">
+      `).join('')}
+      <button id="save-btn" class="btn btn-primary">保存する</button>
+    ` : ''}
+  `;
+  document.getElementById('retake-btn').addEventListener('click', () => { scanBase64 = null; renderScanEmpty(); });
+  document.getElementById('analyze-btn').addEventListener('click', () => { if (!loading) analyzeCard(); });
+  if (result) {
+    document.getElementById('save-btn').addEventListener('click', () => {
+      const form = {};
+      document.querySelectorAll('.scan-result-field').forEach(el => { form[el.dataset.key] = el.value; });
+      const card = { ...form, id: genId(), createdAt: new Date().toISOString(), tags: [] };
+      cards.unshift(card);
+      try {
+        saveCards();
+        renderList('');
+        document.getElementById('search-input').value = '';
+        showScreen('list');
+      } catch(e) {
+        alert('保存に失敗しました。ストレージ容量が不足している可能性があります。\nエクスポートで既存データをバックアップ後、古いデータを削除してみてください。');
+        cards.shift();
+      }
+    });
+  }
+  document.getElementById('scan-file').addEventListener('change', e => handleFile(e.target.files[0]));
+}
+
+const CARD_EXTRACT_TOOL = {
+  name: 'extract_business_card',
+  description: '日本の名刺画像から連絡先情報を構造化して抽出する。',
+  input_schema: {
+    type: 'object',
+    properties: {
+      name:       { type: ['string','null'], description: '氏名。フルネーム。漢字表記があれば漢字を優先し、ふりがなのみの場合はそれを使う。' },
+      company:    { type: ['string','null'], description: '会社名・組織名（正式名称。（株）は「株式会社」等に正規化せず名刺の表記のまま）' },
+      department: { type: ['string','null'], description: '部署名・課名。会社名と混同しないこと。' },
+      title:      { type: ['string','null'], description: '役職名（例：部長、代表取締役）。会社名・部署名は含めない。' },
+      email:      { type: ['string','null'], description: 'メールアドレス。' },
+      phone:      { type: ['string','null'], description: '固定電話番号。「TEL」表記のもの。携帯・FAXとは区別する。' },
+      mobile:     { type: ['string','null'], description: '携帯電話番号。「携帯」「Mobile」表記、または090/080/070から始まる番号。' },
+      fax:        { type: ['string','null'], description: 'FAX番号。「FAX」表記のもの。' },
+      website:    { type: ['string','null'], description: 'ウェブサイトURL。' },
+      address:    { type: ['string','null'], description: '住所。郵便番号があれば含める。' },
+      low_confidence_fields: {
+        type: 'array',
+        items: { type: 'string' },
+        description: '読み取りに自信が持てなかった項目のキー名のみを列挙する（例：["fax","address"]）。ぼやけ・反射・文字の重なりなどで判読が難しかった項目。自信があれば空配列。'
+      }
+    },
+    required: ['name','company','department','title','email','phone','mobile','fax','website','address','low_confidence_fields']
+  }
+};
+
+const CARD_EXTRACT_PROMPT = `この名刺画像から情報を抽出してください。以下の点に注意してください：
+- 会社名・部署名・役職名は明確に区別すること（部署名を会社名に含めない、役職名に部署名を含めない）
+- 電話番号は「TEL」「携帯／Mobile」「FAX」のラベルを手がかりに phone / mobile / fax へ正しく振り分けること。ラベルがなく1つしか番号がない場合は phone に入れる
+- 英字表記と漢字表記が両方ある場合は漢字表記を優先する
+- 名刺に存在しない項目、または判読できない項目は推測で埋めずに null にする
+- 読み取りに自信が持てなかった項目は low_confidence_fields に列挙する`;
+
+async function analyzeCard() {
+  renderScanPreview(true, null, null);
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        tools: [CARD_EXTRACT_TOOL],
+        tool_choice: { type: 'tool', name: 'extract_business_card' },
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: scanMimeType, data: scanBase64 } },
+            { type: 'text', text: CARD_EXTRACT_PROMPT }
+          ]
+        }]
+      })
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data || data.error) {
+      throw new Error(data?.error ? `${data.error.type}: ${data.error.message}` : `HTTPエラー ${res.status}`);
+    }
+    const toolBlock = data.content?.find(b => b.type === 'tool_use');
+    if (!toolBlock) throw new Error('読み取り結果の形式が正しくありませんでした');
+    const result = toolBlock.input || {};
+    const lowConf = Array.isArray(result.low_confidence_fields) ? result.low_confidence_fields : [];
+    renderScanPreview(false, null, result, lowConf);
+  } catch(e) {
+    const errDetail = e.message || '不明なエラー';
+    renderScanPreview(false, `読み取りに失敗しました：${errDetail}`, null);
+    console.error('API Error:', e);
+  }
+}
+
+// ── イベント ──────────────────────────────────────────────────
+document.getElementById('apikey-save').addEventListener('click', () => {
+  const key = document.getElementById('apikey-input').value.trim();
+  if (!key) return;
+  apiKey = key;
+  localStorage.setItem('meishi_apikey', key);
+  renderList('');
+  showScreen('list');
+});
+document.getElementById('apikey-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('apikey-save').click();
+});
+
+
+
+document.getElementById('search-input').addEventListener('input', e => renderList(e.target.value));
+
+document.getElementById('add-btn').addEventListener('click', () => {
+  scanBase64 = null;
+  renderScanEmpty();
+  showScreen('scan');
+});
+
+document.getElementById('scan-cancel').addEventListener('click', () => showScreen('list'));
+
+document.getElementById('detail-back').addEventListener('click', () => showScreen('list'));
+
+document.getElementById('edit-btn').addEventListener('click', () => {
+  renderEdit(currentCard);
+  showScreen('edit');
+});
+
+document.getElementById('delete-btn').addEventListener('click', () => {
+  if (confirm('この名刺を削除しますか？')) {
+    cards = cards.filter(c => c.id !== currentCard.id);
+    saveCards();
+    renderList('');
+    showScreen('list');
+  }
+});
+
+document.getElementById('edit-cancel').addEventListener('click', () => showScreen('detail'));
+
+document.getElementById('edit-save').addEventListener('click', () => {
+  const form = getEditForm();
+  const idx = cards.findIndex(c => c.id === currentCard.id);
+  if (idx !== -1) {
+    cards[idx] = { ...currentCard, ...form };
+    currentCard = cards[idx];
+    saveCards();
+    renderDetail();
+    renderList(document.getElementById('search-input').value);
+    showScreen('detail');
+  }
+});
+
+
+// ── 設定画面 ──────────────────────────────────────────────────
+document.getElementById('settings-back').addEventListener('click', () => showScreen('list'));
+
+document.getElementById('apikey-change').addEventListener('click', () => {
+  document.getElementById('settings-apikey').value = apiKey;
+  document.getElementById('settings-count').textContent = `保存済み名刺：${cards.length}枚`;
+  document.getElementById('import-result').textContent = '';
+  showScreen('settings');
+});
+
+document.getElementById('settings-apikey-save').addEventListener('click', () => {
+  const key = document.getElementById('settings-apikey').value.trim();
+  if (!key) return;
+  apiKey = key;
+  localStorage.setItem('meishi_apikey', key);
+  document.getElementById('settings-apikey-save').textContent = '✓ 保存しました';
+  document.getElementById('settings-apikey-save').style.background = '#6a9e6a';
+  setTimeout(() => {
+    document.getElementById('settings-apikey-save').textContent = '保存';
+    document.getElementById('settings-apikey-save').style.background = '#2a2018';
+  }, 2000);
+});
+
+// エクスポート
+document.getElementById('export-btn').addEventListener('click', () => {
+  const json = JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), cards }, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `meishi_backup_${date}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+// インポート
+document.getElementById('import-btn').addEventListener('click', () => {
+  document.getElementById('import-file').click();
+});
+
+document.getElementById('import-file').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      const imported = data.cards || [];
+      if (!Array.isArray(imported)) throw new Error('形式が正しくありません');
+      imported.forEach(c => { if (!c.id) c.id = genId(); }); // id欠如データの救済
+      const existingIds = new Set(cards.map(c => c.id));
+      const newCards = imported.filter(c => !existingIds.has(c.id));
+      cards = [...newCards, ...cards];
+      saveCards();
+      renderList('');
+      document.getElementById('settings-count').textContent = `保存済み名刺：${cards.length}枚`;
+      const resultEl = document.getElementById('import-result');
+      if (newCards.length > 0) {
+        resultEl.style.color = '#4a9e6a';
+        resultEl.textContent = `✓ ${newCards.length}件追加しました（重複${imported.length - newCards.length}件スキップ）`;
+      } else {
+        resultEl.style.color = '#8a7f72';
+        resultEl.textContent = '追加できる新しいデータがありませんでした';
+      }
+    } catch(err) {
+      const resultEl = document.getElementById('import-result');
+      resultEl.style.color = '#c05040';
+      resultEl.textContent = '読み込みに失敗しました：' + err.message;
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+});
+
+// ── 起動 ──────────────────────────────────────────────────────
+if (apiKey) {
+  renderList('');
+  showScreen('list');
+} else {
+  showScreen('apikey');
+}
+</script>
+</body>
+</html>
